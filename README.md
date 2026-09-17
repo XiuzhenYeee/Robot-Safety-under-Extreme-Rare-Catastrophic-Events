@@ -1,86 +1,25 @@
-# extreme-rare-events-for-robot-safety
+# full_pipeline_comparison
 
-Does a theoretical formula for how rare events cluster in time actually hold
-up on a real (simulated) control system, or only on toy math? This repo
-answers that on a robot navigating past an obstacle under heavy-tailed
-disturbances: it derives a closed-loop safety-violation clustering rate in
-closed form, checks it against a purely data-driven estimator, and shows
-what happens to the robot's actual safety margin if you ignore clustering
-versus correct for it.
+The full nonlinear tube-SMPC controller (see
+[smpc-evt-tube](https://github.com/) for how it works) run head-to-head
+under four tightening strategies, to measure what the θ-correction
+(validated one level up, in this repo's root) actually buys you on the real
+closed-loop system — not just on a frozen-gain approximation.
 
-## Why does this matter for a robot?
+## The four controllers
 
-A safety-critical controller (e.g. an obstacle-avoidance MPC) is usually
-tuned so that the *per-step* probability of a safety violation is below some
-small target $\epsilon$. But a single disturbance doesn't just affect one
-time step — its effect persists through the robot's closed-loop dynamics for
-several subsequent steps. That means violations don't happen independently:
-one near-miss makes the *next* step's near-miss more likely too, so
-violations arrive in short clusters rather than scattering uniformly in
-time.
+| Controller | Tightening |
+|---|---|
+| `baseline` (go-to-goal) | none |
+| `gaussian` | assumes Gaussian tube error |
+| `evt` | POT/GPD quantile, naive per-step $\epsilon$ |
+| `evt_theta` | POT/GPD quantile, θ-corrected $\epsilon_\star = -\ln(1-\epsilon)/(\theta N)$ |
 
-This is exactly the extremal index θ ∈ (0,1] idea (see
-[extreme-value-clustering-in-time-series](https://github.com/) for a
-from-scratch explanation of what θ means in general). Here we go one step
-further: instead of illustrating θ on a synthetic process, we derive it
-**from a real closed-loop robot system's own dynamics**, and check that the
-formula actually predicts what the robot does.
-
-## The setup
-
-A unicycle robot (state = position + heading) is controlled to pass a
-circular obstacle at a fixed tightened stand-off distance, heading
-tangentially around it — the exact operating point where a safety-margin
-violation is most likely to occur. Linearizing the robot's dynamics and its
-feedback control law around that point gives a closed-loop error dynamics
-matrix $A_K$ (via a standard LQR gain), so the tracking error $e_k$ driven by
-disturbances $w_k$ evolves as
-
-```
-e_{k+1} = A_K e_k + w_k,      w_k = zeta_k * b,      Y_k = c^T e_k
-```
-
-where $\zeta_k$ are i.i.d. heavy-tailed (Student-*t*) disturbances acting
-along a fixed direction $b$, and $Y_k = c^T e_k$ is the safety-relevant
-projection of the error onto the obstacle-normal direction $c$ — i.e., how
-close the robot's actual trajectory drifts toward violating the safety
-boundary at step $k$.
-
-Because $A_K$ comes directly from this robot's own linearized dynamics
-(not a made-up matrix), the resulting closed-form extremal index
-$\theta_Y$ is a genuine prediction about *this specific robot's* clustering
-behavior — not just a demonstration that the math is self-consistent.
-
-## What's validated, and how
-
-`validate_theta_unicycle.py` computes $\theta_Y$ two completely independent
-ways and compares them:
-
-1. **Closed form** — directly from $A_K$, $b$, $c$, and the disturbance's
-   tail parameters, with no simulation involved.
-2. **Data-driven** — the **Ferro–Segers (2003) intervals estimator**, which
-   estimates θ purely from the *gaps between exceedance times* in simulated
-   trajectories of $Y_k$, with no knowledge of $A_K$ or the model at all.
-   Averaged over several long, independent trajectories per threshold level
-   (the estimator is noisy at any single threshold, so multiple independent
-   runs are needed to trust the comparison).
-
-Agreement between the two — across thresholds ranging from relatively
-common exceedances (1 in ~12) down to genuinely rare ones (1 in 5,000) — is
-the validation that the closed-form formula isn't just internally
-consistent, but actually describes this robot's real clustering behavior.
-
-`demo_theta_corrected_tightening.py` then asks the practical follow-up
-question: *so what?* Using this robot's own validated $\theta_Y$, it
-compares a naive safety margin (sized only for the per-step target
-$\epsilon$) against a θ-corrected one (sized for the stricter target
-$\epsilon_\star = -\ln(1-\epsilon)/(\theta_Y T)$ over a horizon of length
-$T$), and quantifies the difference directly: how much more often does the
-robot actually experience a violation *episode* over a full run with the
-naive margin, versus the corrected one? (Short answer, at this robot's own
-parameters: the naive margin experiences violation episodes several times
-more often than intended; the θ-corrected margin lands almost exactly on
-target.)
+`evt` and `evt_theta` use the *same* GPD tail estimator and the *same*
+tube-MPC solve at every step — the only difference is the target
+probability level passed in, using this repo's own validated θ for this
+scenario. Any difference in outcome between them is therefore attributable
+to the clustering correction alone, not to a different estimator or solver.
 
 ## Install
 
@@ -88,44 +27,59 @@ target.)
 pip install -r requirements.txt
 ```
 
-No `scipy`/`cvxpy` dependency — everything, including the discrete
-algebraic Riccati equation for the LQR gain, is solved with `numpy` +
-`matplotlib` alone, so this runs anywhere Python + those two packages do.
+Needs `numpy`, `scipy`, `matplotlib`, and `cvxpy` (with its bundled OSQP
+solver) — this is the full nonlinear MPC pipeline, unlike the lighter
+scripts one level up.
+
+## Reproduce the included figures without rerunning the simulation
+
+```bash
+python plot_figures.py
+```
+
+Reads `data/comparison_data.npz` (the exact data behind the included
+figures — $M=300$ trials, fixed seeds) and renders:
+
+- `fig1_scenario_comparison.{png,pdf}` — representative trajectories and
+  min-clearance histograms for baseline/Gaussian/naive-EVT.
+- `fig2_theta_correction.{png,pdf}` — empirical violation probability for
+  naive-EVT vs. θ-corrected-EVT against the target $\epsilon$, plus the
+  safety-margin distribution across all four controllers.
+
+## Rerun the full comparison from scratch (slow)
+
+```bash
+python main_compare_controllers.py   # overwrites data/comparison_data.npz
+python plot_figures.py
+```
+
+This reruns all $M=300$ trials for all four controllers, re-estimating θ
+for the scenario and refitting the GPD tail from fresh Monte Carlo samples
+at every MPC re-solve — it prints "OVERNIGHT settings ... this will take a
+long time" and checkpoints progress to `data/checkpoint.npz` every 10
+trials.
 
 ## Contents
 
-- `validate_theta_unicycle.py` → `theta_unicycle_validation.{png,pdf}`.
-  Derives $A_K$ from the robot's linearized dynamics at the critical
-  operating point, computes $\theta_Y$ in closed form, then cross-checks it
-  against the Ferro–Segers estimator as described above.
-- `demo_theta_corrected_tightening.py` → `theta_corrected_tightening_demo.png`.
-  Quantifies the θ-correction's real effect on this robot: naive vs.
-  corrected episode-level violation probability and expected consecutive-
-  violation run length.
-
-## Run
-
-```bash
-python validate_theta_unicycle.py
-python demo_theta_corrected_tightening.py
-```
-
-`validate_theta_unicycle.py` runs several independent long simulated
-trajectories for the Ferro–Segers cross-check and takes roughly 1–2 minutes.
+- `main_compare_controllers.py` — runs the $M=300$-trial comparison above.
+- `main_linearize_smpc.py` — the linearize-and-resolve (SCP) tube-SMPC
+  solver used inside the comparison.
+- `main_Monte_Carlo.py` — standalone Monte Carlo safety-evaluation utility.
+- `plot_figures.py` — renders the two figures above from saved data.
+- `Helper_*.py` — system setup and disturbance sampling, DLQR gain,
+  dynamics/obstacle linearization, nominal rollout, GPD/EVT quantile
+  estimation (`pot_gpd_quantile`), **extremal-index estimation for this
+  scenario** (`Helper_extremal_index.py` — the same closed-form result
+  validated one level up, applied here to compute this run's θ̂ and
+  $\epsilon_\star$), the tightened-QP solve, and shared type/dataclass
+  definitions.
 
 ## Related
 
-- [smpc-evt-tube](https://github.com/) — the tube-SMPC controller and
-  obstacle-avoidance scenario this validation is built on (naive per-step
-  tightening only, no clustering correction).
-- [extreme-value-clustering-in-time-series](https://github.com/) — a
-  from-scratch, paper-independent explanation of the extremal index concept
-  on a simple synthetic model, before applying it here to a real system.
-
-## Background
-
-This code accompanies *"Stochastic MPC under Heavy-Tailed Disturbances: An
-Extreme Value Theory Approach"* (X. Ye and W. Tang), which develops the
-closed-form extremal index result and the θ-corrected constraint tightening
-proved here, and integrates them into the full tube-SMPC controller in
-[smpc-evt-tube](https://github.com/).
+- [smpc-evt-tube](https://github.com/) — the standalone naive-EVT-only
+  version of this controller (baseline/Gaussian/EVT, no θ-correction),
+  with more detail on the tube-SMPC method itself.
+- The two scripts one directory up (`../validate_theta_unicycle.py`,
+  `../demo_theta_corrected_tightening.py`) validate the θ formula this
+  comparison relies on, on a lighter frozen-gain approximation of the same
+  scenario.
