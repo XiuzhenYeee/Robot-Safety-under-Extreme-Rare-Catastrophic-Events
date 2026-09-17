@@ -79,7 +79,4 @@ trials.
 - [smpc-evt-tube](https://github.com/) — the standalone naive-EVT-only
   version of this controller (baseline/Gaussian/EVT, no θ-correction),
   with more detail on the tube-SMPC method itself.
-- The two scripts one directory up (`../validate_theta_unicycle.py`,
-  `../demo_theta_corrected_tightening.py`) validate the θ formula this
-  comparison relies on, on a lighter frozen-gain approximation of the same
-  scenario.
+ 
