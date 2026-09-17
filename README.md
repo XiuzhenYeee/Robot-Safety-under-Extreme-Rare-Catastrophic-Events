@@ -1,10 +1,10 @@
 # Robot Safety under Extreme Rare Catastrophic Events
 
 The full nonlinear tube-SMPC controller (see
-[smpc-evt-tube](https://github.com/) for how it works) run head-to-head
-under four tightening strategies, to measure what the θ-correction
-(validated one level up, in this repo's root) actually buys you on the real
-closed-loop system — not just on a frozen-gain approximation.
+[smpc-evt-tube](https://github.com/XiuzhenYeee/Stochastic-Model-Predictive-Control-Algorithm-Design-under-Extreme-Rare-Events)
+for how it works) run head-to-head under four tightening strategies, to
+measure what the θ-correction actually buys you on the real closed-loop
+system — not just on a frozen-gain approximation.
 
 ## The four controllers
 
@@ -17,9 +17,23 @@ closed-loop system — not just on a frozen-gain approximation.
 
 `evt` and `evt_theta` use the *same* GPD tail estimator and the *same*
 tube-MPC solve at every step — the only difference is the target
-probability level passed in, using this repo's own validated θ for this
-scenario. Any difference in outcome between them is therefore attributable
-to the clustering correction alone, not to a different estimator or solver.
+probability level passed in, using this scenario's own validated θ. Any
+difference in outcome between them is therefore attributable to the
+clustering correction alone, not to a different estimator or solver.
+
+## Results
+
+**Figure 1 — scenario and naive-tightening comparison.** Representative
+trajectories and minimum-clearance histograms for baseline / Gaussian /
+naive-EVT controllers.
+
+![Scenario trajectories and minimum-clearance histograms for baseline, Gaussian, and naive-EVT controllers](figures/fig1_scenario_comparison.png)
+
+**Figure 2 — effect of the θ-correction.** Empirical violation probability
+for naive-EVT vs. θ-corrected-EVT against the target $\epsilon$ (left), and
+safety-margin distribution across all four controllers (right).
+
+![Empirical violation probability for naive-EVT vs theta-corrected-EVT, and safety-margin distribution across all four controllers](figures/fig2_theta_correction.png)
 
 ## Install
 
@@ -28,23 +42,17 @@ pip install -r requirements.txt
 ```
 
 Needs `numpy`, `scipy`, `matplotlib`, and `cvxpy` (with its bundled OSQP
-solver) — this is the full nonlinear MPC pipeline, unlike the lighter
-scripts one level up.
+solver) — this is the full nonlinear MPC pipeline.
 
-## Reproduce the included figures without rerunning the simulation
+## Reproduce the figures above without rerunning the simulation
 
 ```bash
 python plot_figures.py
 ```
 
-Reads `data/comparison_data.npz` (the exact data behind the included
-figures — $M=300$ trials, fixed seeds) and renders:
-
-- `fig1_scenario_comparison.{png,pdf}` — representative trajectories and
-  min-clearance histograms for baseline/Gaussian/naive-EVT.
-- `fig2_theta_correction.{png,pdf}` — empirical violation probability for
-  naive-EVT vs. θ-corrected-EVT against the target $\epsilon$, plus the
-  safety-margin distribution across all four controllers.
+Reads `data/comparison_data.npz` (the exact data behind the figures above —
+$M=300$ trials, fixed seeds) and renders `fig1_scenario_comparison.{png,pdf}`
+and `fig2_theta_correction.{png,pdf}` into `figures/`.
 
 ## Rerun the full comparison from scratch (slow)
 
@@ -69,14 +77,13 @@ trials.
 - `Helper_*.py` — system setup and disturbance sampling, DLQR gain,
   dynamics/obstacle linearization, nominal rollout, GPD/EVT quantile
   estimation (`pot_gpd_quantile`), **extremal-index estimation for this
-  scenario** (`Helper_extremal_index.py` — the same closed-form result
-  validated one level up, applied here to compute this run's θ̂ and
+  scenario** (`Helper_extremal_index.py` — computes this run's θ̂ and
   $\epsilon_\star$), the tightened-QP solve, and shared type/dataclass
   definitions.
 
 ## Related
 
-- [smpc-evt-tube][https://github.com/](https://github.com/XiuzhenYeee/Stochastic-Model-Predictive-Control-Algorithm-Design-under-Extreme-Rare-Events) — the standalone naive-EVT-only
-  version of this controller (baseline/Gaussian/EVT, no θ-correction),
-  with more detail on the tube-SMPC method itself.
- 
+- [smpc-evt-tube](https://github.com/XiuzhenYeee/Stochastic-Model-Predictive-Control-Algorithm-Design-under-Extreme-Rare-Events) —
+  the standalone naive-EVT-only version of this controller
+  (baseline/Gaussian/EVT, no θ-correction), with more detail on the
+  tube-SMPC method itself.
