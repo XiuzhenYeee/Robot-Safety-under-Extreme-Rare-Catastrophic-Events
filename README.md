@@ -27,13 +27,13 @@ clustering correction alone, not to a different estimator or solver.
 trajectories and minimum-clearance histograms for baseline / Gaussian /
 naive-EVT controllers.
 
-![Scenario trajectories and minimum-clearance histograms for baseline, Gaussian, and naive-EVT controllers](figures/fig1_scenario_comparison.png)
+![Scenario trajectories and minimum-clearance histograms for baseline, Gaussian, and naive-EVT controllers](fig1_scenario_comparison.png)
 
 **Figure 2 — effect of the θ-correction.** Empirical violation probability
 for naive-EVT vs. θ-corrected-EVT against the target $\epsilon$ (left), and
 safety-margin distribution across all four controllers (right).
 
-![Empirical violation probability for naive-EVT vs theta-corrected-EVT, and safety-margin distribution across all four controllers](figures/fig2_theta_correction.png)
+![Empirical violation probability for naive-EVT vs theta-corrected-EVT, and safety-margin distribution across all four controllers](fig2_theta_correction.png)
 
 ## Install
 
