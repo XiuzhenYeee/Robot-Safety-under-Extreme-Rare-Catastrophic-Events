@@ -23,7 +23,7 @@ clustering correction alone, not to a different estimator or solver.
 
 ## Results
 
-**Figure 1 — scenario and naive-tightening comparison.** Representative
+**Figure 1 — scenario and naive-tightening comparison.** Representative trajectories
 <img src="fig1_scenario_comparison.png" width="600" alt="Scenario trajectories and minimum-clearance histograms for baseline, Gaussian, and naive-EVT controllers">
 
 
