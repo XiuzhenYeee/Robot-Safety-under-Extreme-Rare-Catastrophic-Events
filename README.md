@@ -76,7 +76,7 @@ trials.
 
 ## Related
 
-- [smpc-evt-tube](https://github.com/) — the standalone naive-EVT-only
+- [smpc-evt-tube]([https://github.com/](https://github.com/XiuzhenYeee/Stochastic-Model-Predictive-Control-Algorithm-Design-under-Extreme-Rare-Events)) — the standalone naive-EVT-only
   version of this controller (baseline/Gaussian/EVT, no θ-correction),
   with more detail on the tube-SMPC method itself.
  
