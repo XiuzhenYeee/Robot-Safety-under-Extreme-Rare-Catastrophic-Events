@@ -1,4 +1,4 @@
-# full_pipeline_comparison
+# Robot Safety under Extreme Rare Catastrophic Events
 
 The full nonlinear tube-SMPC controller (see
 [smpc-evt-tube](https://github.com/) for how it works) run head-to-head
